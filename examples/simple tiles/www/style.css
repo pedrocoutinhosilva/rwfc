@@ -1,0 +1,49 @@
+body {
+  background: #222;
+}
+
+.center-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  line-height: 100%;
+}
+
+.tile-preview {
+  font-size: 40px;
+}
+
+.tile-details {
+  color: white;
+  height: 80px !important;
+  width: 80px !important;
+  border: 1px solid white;
+}
+
+.cell-details-title {
+  font-size: 12px;
+  line-height: 50px;
+  color: white
+}
+
+.cell-details-tiles-wrapper {
+  color: white;
+  font-size: 35px;
+  display:flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.cell-details-tile {
+  width: 40px;
+  height: 40px;
+  border: 1px solid white;
+}
+
+.preview-grid-cell {
+  height: 100%;
+  width: 100%;
+  border: 1px solid white;
+  color: white;
+}
