@@ -152,14 +152,14 @@ ui <- gridPage(
   div(
     actionButton("restart", "Restart"),
     actionButton("step", "Step"),
-    actionButton("back", "Back"),
+    # actionButton("back", "Back"),
     actionButton("solve", "Solve"),
     uiOutput("tileOptions")
   )
 
 )
 server <- function(input, output, session) {
-    final_grid <- wfc_grid(3, 3, tiles)
+    final_grid <- wfc_grid(15, 15, tiles)
 
     output$preview <- renderUI({
         preview_grid(final_grid)

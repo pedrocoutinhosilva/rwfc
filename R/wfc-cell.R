@@ -24,6 +24,11 @@ wfc_cell_class <- R6Class("wfcCell",
 
     # Collapses the value of a cell to a single tile
     collapse = function() {
+      if (identical(length(private$possible_tiles), 0)) {
+        print("No options left")
+        return()
+      }
+
       private$possible_tiles <- private$possible_tiles %>%
         sample(1)
 
