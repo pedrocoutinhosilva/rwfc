@@ -9,13 +9,18 @@ wfc_cell_class <- R6Class("wfcCell",
     is_impossible = FALSE,
 
     # Did the cell finish collapsing its value into a single tile
-    collapsed = FALSE
+    collapsed = FALSE,
+
+    column = NULL,
+    row = NULL
   ),
 
   public = list(
     # Runs when creating a new object of this class
-    initialize = function(possible_tiles) {
+    initialize = function(possible_tiles, column, row) {
       private$possible_tiles <- possible_tiles
+      private$column <- column
+      private$row <- row
 
       private$collapsed <- private$possible_tiles %>%
         length() %>%
@@ -47,6 +52,10 @@ wfc_cell_class <- R6Class("wfcCell",
       length(private$possible_tiles)
     },
 
+    get_position = function() {
+      list(column = private$column, row = private$row)
+    },
+
     get_possible_tiles = function() {
       private$possible_tiles
     },
@@ -68,6 +77,6 @@ wfc_cell_class <- R6Class("wfcCell",
 )
 
 #' @export
-wfc_cell <- function(tiles) {
-  wfc_cell_class$new(tiles)
+wfc_cell <- function(tiles, column, row) {
+  wfc_cell_class$new(tiles, column, row)
 }

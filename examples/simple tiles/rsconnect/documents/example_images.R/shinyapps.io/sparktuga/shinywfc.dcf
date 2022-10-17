@@ -1,0 +1,13 @@
+name: shinywfc
+title: shinywfc
+username:
+account: sparktuga
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 7306776
+bundleId: 6408880
+url: https://sparktuga.shinyapps.io/shinywfc/
+when: 1665952672.8544
+lastSyncTime: 1665952672.8544
+asMultiple: FALSE
+asStatic: FALSE

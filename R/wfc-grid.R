@@ -7,21 +7,17 @@ wfc_grid_class <- R6Class("wcfGrid",
     width = NULL,
     grid = NULL,
 
+    step_grid = NULL,
+
     iterations = 0,
 
     tiles = NULL,
 
-    add_iteration = function(grid) {
+    add_iteration = function() {
       private$iterations <- private$iterations + 1
     },
 
     remove_iteration = function() {
-      # purrr::map(seq_len(private$width), function(column) {
-      #     purrr::map(seq_len(private$height), function(row) {
-      #         private$grid[[column]][[row]]$step_back()
-      #     })
-      # })
-
       private$iterations <- private$iterations - 1
     },
 
@@ -66,45 +62,10 @@ wfc_grid_class <- R6Class("wcfGrid",
       )
     },
 
-    newEntropyGrid = function() {
-      height <- private$width
-      width <- private$width
-
-      new_grid <- vector("list", width)
-
-      for (index in seq_len(width)) {
-        new_grid[[index]] <- vector("list", height)
-      }
-
-      for (column in seq_len(width)) {
-        for (row in seq_len(height)) {
-          new_grid[[column]][[row]] <- FALSE
-        }
-      }
-
-      new_grid
-    },
-
-    updateEntropy = function(entropy_grid, cell) {
-      affected_cells <- private$get_neighbour_cells(cell)
-
-      if (!is.null(affected_cells$up)) {
-        entropy_grid[[affected_cells$up$row]][[affected_cells$up$column]]$reduce_entropy() # nolint
-      }
-
-
-      # for (cell in affected_cells) {
-      #    if (!is.null(cell)) {
-      #     entropy_grid[[cell$row]][[cell$column]] <- TRUE
-      #     )
-      #    }
-      # }
-    },
-
     next_collapse_target = function() {
-      entropy_grid <- unlist(lapply(seq_len(private$width), function(row) {
-        lapply(seq_len(private$height), function(column) {
-          private$grid[[row]][[column]]$get_entropy()
+      entropy_grid <- unlist(lapply(seq_len(private$width), function(column) {
+        lapply(seq_len(private$height), function(row) {
+          private$grid[[column]][[row]]$get_entropy()
         })
       }), recursive = FALSE)
 
@@ -119,8 +80,8 @@ wfc_grid_class <- R6Class("wcfGrid",
       if (identical(smallest_entropy, length(private$tiles))) {
         return(
           list(
-              row = sample(seq_len(private$height), 1),
-              column = sample(seq_len(private$width), 1)
+              column = sample(seq_len(private$width), 1),
+              row = sample(seq_len(private$height), 1)
             )
         )
       }
@@ -129,7 +90,7 @@ wfc_grid_class <- R6Class("wcfGrid",
       for (column in seq_len(private$width)) {
         for (row in seq_len(private$height)) {
           if (identical(
-            private$grid[[row]][[column]]$get_entropy(),
+            private$grid[[column]][[row]]$get_entropy(),
             smallest_entropy)
           ) {
             next_cell <- list(
@@ -142,6 +103,22 @@ wfc_grid_class <- R6Class("wcfGrid",
       }
 
       return(FALSE)
+    },
+
+    new_grid = function() {
+      new_grid <- vector("list", private$width)
+
+      for (index in seq_len(private$width)) {
+        new_grid[[index]] <- vector("list", private$height)
+      }
+
+      for (column in seq_len(private$width)) {
+        for (row in seq_len(private$height)) {
+          new_grid[[column]][[row]] <- wfc_cell(private$tiles, column, row)
+        }
+      }
+
+      new_grid
     }
   ),
 
@@ -152,6 +129,7 @@ wfc_grid_class <- R6Class("wcfGrid",
 
       private$tiles <- tiles
 
+      # generate rotation tiles
       if (rotations) {
         for (tile in tiles) {
           if (!is.null(tile$get_rotations())) {
@@ -165,50 +143,22 @@ wfc_grid_class <- R6Class("wcfGrid",
         }
       }
 
-      new_grid <- vector("list", width)
-
-      for (index in seq_len(width)) {
-        new_grid[[index]] <- vector("list", height)
-      }
-
-      for (column in seq_len(width)) {
-        for (row in seq_len(height)) {
-          new_grid[[column]][[row]] <- wfc_cell(private$tiles)
-        }
-      }
-
-      private$grid <- new_grid
-      private$add_iteration(new_grid)
+      self$reset()
     },
 
     reset = function() {
       private$iterations <- 0
 
-      width <- private$width
-      height <- private$height
-
-      new_grid <- vector("list", width)
-
-      for (index in seq_len(width)) {
-        new_grid[[index]] <- vector("list", height)
-      }
-
-      for (column in seq_len(width)) {
-        for (row in seq_len(height)) {
-          new_grid[[column]][[row]] <- wfc_cell(private$tiles)
-        }
-      }
-
-      private$grid <- new_grid
-      private$add_iteration(new_grid)
+      private$grid <- private$new_grid()
+      private$add_iteration()
     },
 
     get_width = function() {
-      length(private$grid)
+      private$width
     },
 
     get_height = function() {
-      length(private$grid[[1]])
+      private$height
     },
 
     get_grid = function() {
@@ -219,97 +169,52 @@ wfc_grid_class <- R6Class("wcfGrid",
       private$tiles
     },
 
+    # TODO
     step_back = function() {
       private$remove_iteration()
     },
 
-    reset_entropy = function(starter_cell) {
-      private$grid[[starter_cell$row]][[starter_cell$column]]$set_possible_tiles(private$tiles)
+    reset_step_grid = function(width = private$width, height = private$height) {
+      new_grid <- vector("list", width)
 
-      affected_cells <- private$get_neighbour_cells(starter_cell)
+      for (index in seq_len(width)) {
+        new_grid[[index]] <- vector("list", height)
+      }
 
-      if (!is.null(affected_cells$up)) {
-        target_cell <- private$grid[[affected_cells$up$row]][[affected_cells$up$column]] # nolint
-
-        # get the required socket value of the neighbour cell
-        socket <- target_cell$get_possible_tiles()[[1]]$get_sockets()[3]
-
-        filtered_tiles <- purrr::keep(
-          private$grid[[starter_cell$row]][[starter_cell$column]]$get_possible_tiles(),
-          function(tile) {
-            identical(tile$get_sockets()[[1]], stringi::stri_reverse(socket))
-          }
-        )
-
-        private$grid[[starter_cell$row]][[starter_cell$column]]$set_possible_tiles(filtered_tiles)
-
-        if (length(filtered_tiles) < 1) {
-          return(FALSE)
+      for (column in seq_len(width)) {
+        for (row in seq_len(height)) {
+          new_grid[[column]][[row]] <- 0
         }
       }
 
-      if (!is.null(affected_cells$down)) {
-        target_cell <- private$grid[[affected_cells$down$row]][[affected_cells$down$column]] # nolint
+      private$step_grid <- new_grid
+    },
 
-        # get the required socket value of the neighbour cell
-        socket <- target_cell$get_possible_tiles()[[1]]$get_sockets()[1]
-
-        filtered_tiles <- purrr::keep(
-          private$grid[[starter_cell$row]][[starter_cell$column]]$get_possible_tiles(),
-          function(tile) {
-            identical(tile$get_sockets()[[3]], stringi::stri_reverse(socket))
-          }
-        )
-
-        private$grid[[starter_cell$row]][[starter_cell$column]]$set_possible_tiles(filtered_tiles)
-
-        if (length(filtered_tiles) < 1) {
-          return(FALSE)
-        }
+    step_ripple = function(ripple) {
+      if (!0 %in% unique(unlist(private$step_grid))) {
+        return()
       }
 
-      if (!is.null(affected_cells$right)) {
-        target_cell <- private$grid[[affected_cells$right$row]][[affected_cells$right$column]] # nolint
+      purrr::walk(seq_len(private$width), function(column) {
+        purrr::walk(seq_len(private$height), function(row) {
+          if (identical(private$step_grid[[column]][[row]], ripple)) {
+            location <- list(column = column, row = row)
 
-        # get the required socket value of the neighbour cell
-        socket <- target_cell$get_possible_tiles()[[1]]$get_sockets()[2]
-
-        filtered_tiles <- purrr::keep(
-          private$grid[[starter_cell$row]][[starter_cell$column]]$get_possible_tiles(),
-          function(tile) {
-            identical(tile$get_sockets()[[4]], stringi::stri_reverse(socket))
+            for (next_cell in private$get_neighbour_cells(location)) {
+              if (!is.null(next_cell)) {
+                if (identical(private$step_grid[[next_cell$column]][[next_cell$row]], 0)) {
+                  private$step_grid[[next_cell$column]][[next_cell$row]] <- ripple + 1
+                  if (!identical(length(private$grid[[next_cell$column]][[next_cell$row]]$get_entropy()), 1)) {
+                    self$recalculate_cell_entropy(next_cell$column, next_cell$row)
+                  }
+                }
+              }
+            }
           }
-        )
+        })
+      })
 
-        private$grid[[starter_cell$row]][[starter_cell$column]]$set_possible_tiles(filtered_tiles)
-
-        if (length(filtered_tiles) < 1) {
-          return(FALSE)
-        }
-      }
-
-      if (!is.null(affected_cells$left)) {
-        target_cell <- private$grid[[affected_cells$left$row]][[affected_cells$left$column]] # nolint
-
-        # get the required socket value of the neighbour cell
-        socket <- target_cell$get_possible_tiles()[[1]]$get_sockets()[4]
-
-        filtered_tiles <- purrr::keep(
-          private$grid[[starter_cell$row]][[starter_cell$column]]$get_possible_tiles(),
-          function(tile) {
-            identical(tile$get_sockets()[[2]], stringi::stri_reverse(socket))
-          }
-        )
-
-        private$grid[[starter_cell$row]][[starter_cell$column]]$set_possible_tiles(filtered_tiles)
-
-        if (length(filtered_tiles) < 1) {
-          return(FALSE)
-        }
-      }
-
-      print("bail success")
-      return(TRUE)
+      self$step_ripple(ripple + 1)
     },
 
     step = function() {
@@ -321,126 +226,82 @@ wfc_grid_class <- R6Class("wcfGrid",
         return(FALSE)
       }
 
-      if (length(private$grid[[starter_cell$row]][[starter_cell$column]]$get_possible_tiles()) < 1) {
-        print("bail")
+      self$reset_step_grid()
 
-        reset_result <- self$reset_entropy(starter_cell)
+      private$grid[[starter_cell$column]][[starter_cell$row]]$collapse()
+      private$step_grid[[starter_cell$column]][[starter_cell$row]] <- 1
 
-        if (!reset_result) {
-          print("bail failed")
-          return(FALSE)
-        }
-      }
+      self$step_ripple(1)
 
-      # collapse the starting element
-      temp_grid <- private$grid
-      temp_grid[[starter_cell$row]][[starter_cell$column]]$collapse()
-
-      # keep track of cells that need collapsing (neighbours of updated cells)
-      # start with neighbours of the starting cell
-      # UP RIGHT DOWN LEFT
-      # entropy_grid <- private$newEntropyGrid()
-      # entropy_grid <- private$updateEntropy(entropy_grid, starter_cell)
-
-      # Get affected cells based on collased cell
-      affected_cells <- private$get_neighbour_cells(starter_cell)
-
-      starter_cell <- temp_grid[[starter_cell$row]][[starter_cell$column]]
-      # update up cell rules regarding down
-      if (!is.null(affected_cells$up)) {
-        target_cell <- temp_grid[[affected_cells$up$row]][[affected_cells$up$column]] # nolint
-
-        # get the required socket value of the collapsed cell
-        socket <- starter_cell$get_possible_tiles()[[1]]$get_sockets()[1]
-
-        filtered_tiles <- purrr::keep(
-          target_cell$get_possible_tiles(),
-          function(tile) {
-            identical(tile$get_sockets()[[3]], stringi::stri_reverse(socket))
-          }
-        )
-
-        temp_grid[[affected_cells$up$row]][[affected_cells$up$column]]$set_possible_tiles(filtered_tiles)
-
-        if (length(filtered_tiles) < 1) {
-          return(FALSE)
-        }
-      }
-      # update right cell rules regarding left
-      if (!is.null(affected_cells$right)) {
-        target_cell <- temp_grid[[affected_cells$right$row]][[affected_cells$right$column]] # nolint
-
-        # get the required socket value of the collapsed cell
-        socket <- starter_cell$get_possible_tiles()[[1]]$get_sockets()[2]
-
-        filtered_tiles <- purrr::keep(
-          target_cell$get_possible_tiles(),
-          function(tile) {
-            identical(tile$get_sockets()[[4]], stringi::stri_reverse(socket))
-          }
-        )
-
-        temp_grid[[affected_cells$right$row]][[affected_cells$right$column]]$set_possible_tiles(filtered_tiles)
-
-        if (length(filtered_tiles) < 1) {
-          return(FALSE)
-        }
-      }
-      # update down cell rules regarding up
-      if (!is.null(affected_cells$down)) {
-        target_cell <- temp_grid[[affected_cells$down$row]][[affected_cells$down$column]] # nolint
-
-        # get the required socket value of the collapsed cell
-        socket <- starter_cell$get_possible_tiles()[[1]]$get_sockets()[3]
-
-        filtered_tiles <- purrr::keep(
-          target_cell$get_possible_tiles(),
-          function(tile) {
-            identical(tile$get_sockets()[[1]], stringi::stri_reverse(socket))
-          }
-        )
-
-        temp_grid[[affected_cells$down$row]][[affected_cells$down$column]]$set_possible_tiles(filtered_tiles)
-
-        if (length(filtered_tiles) < 1) {
-          return(FALSE)
-        }
-      }
-      # update left cell rules regarding right
-      if (!is.null(affected_cells$left)) {
-        target_cell <- temp_grid[[affected_cells$left$row]][[affected_cells$left$column]] # nolint
-
-        # get the required socket value of the collapsed cell
-        socket <- starter_cell$get_possible_tiles()[[1]]$get_sockets()[4]
-
-        filtered_tiles <- purrr::keep(
-          target_cell$get_possible_tiles(),
-          function(tile) {
-            identical(tile$get_sockets()[[2]], stringi::stri_reverse(socket))
-          }
-        )
-
-        temp_grid[[affected_cells$left$row]][[affected_cells$left$column]]$set_possible_tiles(filtered_tiles)
-
-        if (length(filtered_tiles) < 1) {
-          return(FALSE)
-        }
-      }
-
-      # print(entropy_grid)
-
-      # for each neighbour tile, check the possible options that tile allows
-      # and remove possible tiles from the tiles that do not comply
-
-      # collapse remaining grid
-
-      # store new grid
-      # Update grid
-      private$grid <- temp_grid
-      private$add_iteration(temp_grid)
+      private$add_iteration()
 
       print("step done")
       return(TRUE)
+    },
+
+    process_neighbour_tiles = function(cell,
+                                        neighbour_cell,
+                                        direction_index,
+                                        oposite_direction_index) {
+
+        # neighbour has not been at least partially collapsed
+        # all options are possible
+        if (identical(length(neighbour_cell$get_possible_tiles()), length(private$tiles))) { # nolint
+          return()
+        }
+
+        # sockets that the neighbour_cell allows
+        neighbour_sockets <- neighbour_cell$get_possible_tiles() %>%
+          purrr::map(function(tile) {
+            tile$get_sockets()[[oposite_direction_index]]
+          }) %>%
+          unique() %>%
+          stringi::stri_reverse()
+
+        # keep tiles of the current cell that fit the neighbour_cell
+        filtered_tiles <- cell$get_possible_tiles() %>%
+          purrr::keep(
+            function(tile) {
+              tile$get_sockets()[[direction_index]] %in% neighbour_sockets
+            }
+          )
+
+        print(direction_index)
+        print(neighbour_sockets)
+        print(filtered_tiles)
+
+        cell$set_possible_tiles(filtered_tiles)
+    },
+
+    recalculate_cell_entropy = function(column, row) {
+      # get cell
+      cell <- private$grid[[column]][[row]]
+
+      # get neighbours
+      neighbours <- list(column = column, row = row) %>%
+        private$get_neighbour_cells()
+
+      # calculate tiles based on that info
+      if (!is.null(neighbours$up)) {
+        neighbour_cell <- private$grid[[neighbours$up$column]][[neighbours$up$row]]
+        # print(neighbour_cell)
+        self$process_neighbour_tiles(cell, neighbour_cell, 1, 3)
+      }
+      if (!is.null(neighbours$right)) {
+        neighbour_cell <- private$grid[[neighbours$right$column]][[neighbours$right$row]]
+        # print(neighbour_cell)
+        self$process_neighbour_tiles(cell, neighbour_cell, 2, 4)
+      }
+      if (!is.null(neighbours$down)) {
+        neighbour_cell <- private$grid[[neighbours$down$column]][[neighbours$down$row]]
+        # print(neighbour_cell)
+        self$process_neighbour_tiles(cell, neighbour_cell, 3, 1)
+      }
+      if (!is.null(neighbours$left)) {
+        neighbour_cell <- private$grid[[neighbours$left$column]][[neighbours$left$row]]
+        # print(neighbour_cell)
+        self$process_neighbour_tiles(cell, neighbour_cell, 4, 2)
+      }
     },
 
     solve = function() {
@@ -464,9 +325,21 @@ wfc_grid_class <- R6Class("wcfGrid",
       cat(private$iterations, "\n")
 
       cat("Last Grid: \n")
-      for (row in private$grid) {
-        for (column in row) {
-          cat(column$get_entropy(), " ")
+      for (column in private$grid) {
+        for (row in column) {
+          cat(row$get_entropy(), " ")
+        }
+        cat("\n")
+      }
+
+      invisible(self)
+    },
+
+    print_step_grid = function() {
+      cat("Step Grid: \n")
+      for (column in private$step_grid) {
+        for (row in column) {
+          cat(row, " ")
         }
         cat("\n")
       }

@@ -7,3 +7,7 @@ let updatePreview = function(cell){
     }
   )
 }
+
+let triggerAutoStep = function() {
+  Shiny.setInputValue( "renderFinished", "trigger", {priority: "event"} )
+}

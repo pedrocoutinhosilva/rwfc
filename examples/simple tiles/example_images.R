@@ -3,20 +3,6 @@ library(wfc)
 library(imola)
 library(imager)
 
-# tiles <- list(
-#     wfc_tile("A_000", c("AAA", "AAA", "AAA", "AAA")),
-#     wfc_tile("A_014", c("AAA", "AAA", "AAA", "AAA")),
-#     wfc_tile("A_029", c("BBB", "BBB", "BBB", "BBB")),
-#     wfc_tile("A_021", c("BBB", "BBB", "BBB", "BBB")),
-#     wfc_tile("C_27", c("BAB", "BAB", "BAB", "BAB")),
-#     wfc_tile("A_004", c("BBB", "BAA", "AAB", "BBB"), c("A_006", "A_035", "A_033")),
-#     wfc_tile("A_005", c("BBB", "BAA", "AAA", "AAB"), c("A_020", "A_034", "A_018")),
-#     wfc_tile("A_044", c("AAA", "AAB", "BAA", "AAA"), c("A_045", "A_057", "A_056")),
-#     wfc_tile("C_19", c("BBB", "BBB", "BAB", "BBB"), c("C_29", "C_43", "C_26")),
-#     wfc_tile("C_37", c("BAB", "BBB", "BAB", "BBB"), c("C_28")),
-#     wfc_tile("C_44", c("BBB", "BAB", "BAB", "BBB"), c("C_45", "C_52", "C_51"))
-# )
-
 tiles <- list(
     wfc_tile("tile020", c("AAA", "ABC", "CBA", "AAA"), c("tile022", "tile060", "tile058")), #nolint
     wfc_tile("tile021", c("AAA", "ABC", "CCC", "CBA"), c("tile041", "tile059", "tile039")), #nolint
@@ -84,7 +70,7 @@ sidebar <- function(tiles) {
   do.call(
     gridPanel,
     append(
-      list(columns = "1fr 1fr 1fr"),
+      list(columns = "1fr 1fr 1fr 1fr 1fr"),
       lapply(seq_len(length(tiles)), function(tile) {
         tile_details(tiles[[tile]])
       })
@@ -146,8 +132,8 @@ preview_cell <- function(cell) {
   )
 }
 preview_grid <- function(grid_component) {
-  x <- grid_component$get_width()
-  y <- grid_component$get_height()
+  y <- grid_component$get_width()
+  x <- grid_component$get_height()
 
   do.call(
     gridPanel,
@@ -155,7 +141,8 @@ preview_grid <- function(grid_component) {
     append(
       list(
         rows = paste("repeat(", x, ", 50px)"),
-        columns = paste("repeat(", y, ", 50px)")
+        columns = paste("repeat(", y, ", 50px)"),
+        tags$script("triggerAutoStep();")
       ),
       unlist(lapply(seq_len(x), function(row) {
         lapply(seq_len(y), function(column) {
@@ -164,7 +151,7 @@ preview_grid <- function(grid_component) {
             class = "preview-cell",
             `data-row` = row,
             `data-column` = column,
-            preview_cell(grid_component$get_grid()[[row]][[column]])
+            preview_cell(grid_component$get_grid()[[column]][[row]])
           )
         })
       }), recursive = FALSE)
@@ -177,7 +164,7 @@ ui <- gridPage(
   tags$script(src = "script.js"),
 
   gap = "15px",
-  columns = "300px 1fr 200px",
+  columns = "500px 1fr 200px",
 
   uiOutput("sidebar"),
   uiOutput("preview"),
@@ -185,13 +172,13 @@ ui <- gridPage(
     actionButton("restart", "Restart"),
     actionButton("step", "Step"),
     actionButton("solve", "Solve"),
-    # actionButton("autoStep", "Auto Step"),
+    checkboxInput("autoStep", "Auto Step"),
     uiOutput("tileOptions")
   )
 
 )
 server <- function(input, output, session) {
-    final_grid <- wfc_grid(32, 32, tiles)
+    final_grid <- wfc_grid(24, 24, tiles)
 
     output$preview <- renderUI({
         preview_grid(final_grid)
@@ -217,24 +204,14 @@ server <- function(input, output, session) {
       })
     })
 
-    observeEvent(input$autoStep, {
-      next_step <- function() {
-        still_going <- final_grid$step()
+    observeEvent(input$renderFinished, {
+      if (input$autoStep) {
+        final_grid$step()
 
         output$preview <- renderUI({
             preview_grid(final_grid)
         })
-
-        if (still_going) {
-          Sys.sleep(1)
-
-          next_step()
-        }
-
-        return(FALSE)
       }
-
-      next_step()
     })
 
 
@@ -259,7 +236,7 @@ server <- function(input, output, session) {
 
     observeEvent(input$showCellTile, {
       output$tileOptions <- renderUI({
-        selected_cell_options(final_grid$get_grid()[[as.integer(input$showCellTile$row)]][[as.integer(input$showCellTile$column)]])
+        selected_cell_options(final_grid$get_grid()[[as.integer(input$showCellTile$column)]][[as.integer(input$showCellTile$row)]])
       })
     })
 }
