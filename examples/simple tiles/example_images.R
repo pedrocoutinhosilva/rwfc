@@ -2,6 +2,9 @@ library(shiny)
 library(wfc)
 library(imola)
 library(imager)
+# library(reactlog)
+
+# reactlog_enable()
 
 tiles <- list(
     wfc_tile("tile020", c("AAA", "ABC", "CBA", "AAA"), c("tile022", "tile060", "tile058")), #nolint
@@ -132,20 +135,20 @@ preview_cell <- function(cell) {
   )
 }
 preview_grid <- function(grid_component) {
-  y <- grid_component$get_width()
-  x <- grid_component$get_height()
+  num_columns <- grid_component$get_width()
+  num_rows <- grid_component$get_height()
 
   do.call(
     gridPanel,
 
     append(
       list(
-        rows = paste("repeat(", x, ", 50px)"),
-        columns = paste("repeat(", y, ", 50px)"),
+        rows = paste("repeat(", num_rows, ", 50px)"),
+        columns = paste("repeat(", num_columns, ", 50px)"),
         tags$script("triggerAutoStep();")
       ),
-      unlist(lapply(seq_len(x), function(row) {
-        lapply(seq_len(y), function(column) {
+      unlist(lapply(seq_len(num_rows), function(row) {
+        lapply(seq_len(num_columns), function(column) {
           div(
             onmouseenter = "updatePreview(this);",
             class = "preview-cell",
@@ -178,7 +181,7 @@ ui <- gridPage(
 
 )
 server <- function(input, output, session) {
-    final_grid <- wfc_grid(24, 24, tiles)
+    final_grid <- wfc_grid(12, 12, tiles)
 
     output$preview <- renderUI({
         preview_grid(final_grid)

@@ -1,5 +1,10 @@
 body {
   background: #222;
+  color: white;
+}
+
+.checkbox .label span {
+  color: white !important;
 }
 
 .center-content {

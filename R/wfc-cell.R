@@ -16,6 +16,13 @@ wfc_cell_class <- R6Class("wfcCell",
   ),
 
   public = list(
+    neighbours = list(
+      up = NULL,
+      right = NULL,
+      down = NULL,
+      left = NULL
+    ),
+
     # Runs when creating a new object of this class
     initialize = function(possible_tiles, column, row) {
       private$possible_tiles <- possible_tiles
@@ -25,6 +32,10 @@ wfc_cell_class <- R6Class("wfcCell",
       private$collapsed <- private$possible_tiles %>%
         length() %>%
         identical(1)
+    },
+
+    reduce_entropy = function() {
+
     },
 
     # Collapses the value of a cell to a single tile
