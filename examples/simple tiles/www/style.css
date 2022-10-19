@@ -1,6 +1,81 @@
 body {
-  background: #222;
-  color: white;
+  background: #343745;
+  color: #e4e9ff;
+  font-family: 'Noto Sans', sans-serif;
+  padding: 20px;
+  font-size: 1.6rem;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+.header {
+  border-bottom: 2px solid #e4e9ff;
+  margin: 0 20px;
+  line-height: 100%;
+  font-size: 2.3rem;
+  margin-left: 0;
+}
+
+.selectize-input {
+  background: #343745 !important;
+  color: #e4e9ff !important;
+  border-color: #e4e9ff !important;
+  text-align: center;;
+}
+.selectize-dropdown .active {
+  background-color: #c4cbec;
+}
+
+#solve {
+  margin-top: 20px;;
+}
+
+#solve,
+#step,
+#restart,
+#showTiles {
+  background: #343745 !important;
+  color: #e4e9ff !important;
+  border-color: #e4e9ff !important;
+  width: 100%;
+}
+#step:hover,
+#solve:hover,
+#restart:hover,
+#showTiles:hover {
+  background: #c4cbec !important;
+  color: #343745 !important;
+}
+
+.separator {
+  background-color: #e4e9ff;
+  height: 2px;
+  margin: 20px;
+}
+
+.selectize-input.dropdown-active::after {
+  border-color: transparent transparent #e4e9ff transparent !important;
+}
+.selectize-input::after {
+  border-color: #e4e9ff transparent transparent transparent !important;
+}
+
+.selectize-dropdown {
+  background: #e4e9ff !important;
+}
+
+.cell-tile-entropy {
+  border: 1px dashed #242630;
+}
+
+.modal-content {
+  background: #343745;
+  border: 2px solid;
+}
+
+.socket-preview {
+  font-size: 12px;
 }
 
 .checkbox .label span {
@@ -20,7 +95,6 @@ body {
 }
 
 .tile-details {
-  color: white;
   height: 80px !important;
   width: 80px !important;
   border: 1px solid white;
@@ -29,11 +103,9 @@ body {
 .cell-details-title {
   font-size: 12px;
   line-height: 50px;
-  color: white
 }
 
 .cell-details-tiles-wrapper {
-  color: white;
   font-size: 35px;
   display:flex;
   gap: 5px;
@@ -43,12 +115,11 @@ body {
 .cell-details-tile {
   width: 40px;
   height: 40px;
-  border: 1px solid white;
+  border: 1px solid;
 }
 
 .preview-grid-cell {
   height: 100%;
   width: 100%;
   /* border: 1px solid white; */
-  color: white;
 }
