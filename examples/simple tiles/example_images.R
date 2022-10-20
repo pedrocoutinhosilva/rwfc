@@ -232,13 +232,13 @@ ui <- gridPage(
 
     div(class = "separator"),
 
-    actionButton("restart", "Restart"),
-
-    div(class = "separator"),
-
     tags$label("Solve Grid"),
     actionButton("step", "Collapse next cell"),
     actionButton("solve", "Collapse all cells"),
+
+    div(class = "separator"),
+
+    actionButton("restart", "Restart"),
 
     div(class = "separator"),
 
