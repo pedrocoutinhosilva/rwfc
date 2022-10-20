@@ -37,6 +37,4 @@ print_entropy_grid <- function(grid) {
     print_grid(function(cell) {
       cell
     })
-
-  invisible(self)
 }

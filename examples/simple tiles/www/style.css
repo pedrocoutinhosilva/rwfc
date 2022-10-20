@@ -69,6 +69,10 @@ body {
   border: 1px dashed #242630;
 }
 
+.preview-cell {
+  aspect-ratio: 1;
+}
+
 .modal-content {
   background: #343745;
   border: 2px solid;
@@ -102,7 +106,13 @@ body {
 
 .cell-details-title {
   font-size: 12px;
-  line-height: 50px;
+
+  text-align: center;
+  align-items: center;
+  line-height: 150%;
+  min-height: 100px;
+  display: flex;
+  padding: 20px;
 }
 
 .cell-details-tiles-wrapper {
@@ -113,13 +123,25 @@ body {
 }
 
 .cell-details-tile {
-  width: 40px;
-  height: 40px;
+  width: 24px;
+  height: 24px;
   border: 1px solid;
 }
 
 .preview-grid-cell {
   height: 100%;
   width: 100%;
-  /* border: 1px solid white; */
+}
+
+.irs-grid {
+  display: none !important;
+}
+
+.irs-single {
+  background-color: transparent !important;
+}
+
+.irs-line {
+  background-color: #e4e9ff !important;
+  border: none !important;
 }

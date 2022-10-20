@@ -141,6 +141,8 @@ wfc_grid_class <- R6Class("wcfGrid",
   ),
 
   public = list(
+    is_finished = FALSE,
+
     initialize = function(width, height, tiles, rotations = TRUE) {
       private$width <- width
       private$height <- height
@@ -233,12 +235,13 @@ wfc_grid_class <- R6Class("wcfGrid",
       self$step_ripple(ripple + 1, temp_next_ripple_cells)
     },
 
-    step = function() {
+    step = function(verbose = FALSE) {
       # get random lowest entropy random
       starter_cell <- private$next_collapse_target()
 
       # No more starter cells. Its collapsed
       if (identical(starter_cell, FALSE)) {
+        self$is_finished <- TRUE
         return(FALSE)
       }
 
@@ -251,7 +254,10 @@ wfc_grid_class <- R6Class("wcfGrid",
 
       private$add_iteration()
 
-      print("step done")
+      if (verbose) {
+        print("step done")
+      }
+
       return(TRUE)
     },
 
@@ -329,6 +335,7 @@ wfc_grid_class <- R6Class("wcfGrid",
         step <- self$step()
 
         if (identical(step, FALSE)) {
+          self$is_finished <- TRUE
           break
         }
       }

@@ -28,7 +28,7 @@ tilesets <- list(
     tile_render_callback = function(content) {
       tags$img(
         style = "height: 100%; width: 100%;",
-        src = source_url(content)
+        src = paste0("tileset/", content, ".png")
       )
     }
   ),
@@ -46,10 +46,6 @@ tilesets <- list(
     }
   )
 )
-
-source_url <- function(content) {
-  paste0("tileset/", content, ".png")
-}
 
 socket_preview <- function(content) {
   div(
@@ -133,14 +129,16 @@ preview_cell <- function(cell, render_callback) {
   }
 
   style <- "
-    font-size: 71px;
-    line-height: 71px;
+    font-size: 47px;
+    line-height: 100%;
   "
 
   if (cell$get_entropy() > 1) {
     content <- cell$get_entropy()
     style <- "
       border: 1px dashed #9497a5;
+      font-size: 1.2rem;
+
     "
   }
 
@@ -164,9 +162,8 @@ preview_grid <- function(grid_component, render_callback) {
 
     append(
       list(
-        rows = paste("repeat(", num_rows, ", 50px)"),
-        columns = paste("repeat(", num_columns, ", 50px)"),
-        tags$script("triggerAutoStep();")
+        rows = paste0("repeat(", num_rows, ", 36px)"),
+        columns = paste0("repeat(", num_columns, ", 36px)")
       ),
       unlist(lapply(seq_len(num_rows), function(row) {
         lapply(seq_len(num_columns), function(column) {
@@ -202,14 +199,31 @@ ui <- gridPage(
 
   areas = c(
     "header header",
-    "sidebar preview_cells",
+    "sidebar main",
     "sidebar main"
   ),
 
-  preview_cells = uiOutput("tileOptions"),
-
   header = div("Wave function collapse in R / Shiny"),
   sidebar = div(
+    sliderInput(
+      "gridWidth",
+      "Grid Width",
+      20,
+      min = 1,
+      max = 50,
+      width = "100%"
+    ),
+    sliderInput(
+      "gridHeight",
+      "Grid Height",
+      12,
+      min = 1,
+      max = 50,
+      width = "100%"
+    ),
+
+    div(class = "separator"),
+
     selectInput("tileset", "Change tileset", list(
       `Walls and Brick` = "walls",
       `Abstract Shapes` = "abstract"
@@ -224,84 +238,179 @@ ui <- gridPage(
 
     tags$label("Solve Grid"),
     actionButton("step", "Collapse next cell"),
-    checkboxInput("autoStep", "Collapse until finished"),
     actionButton("solve", "Collapse all cells"),
 
-    div(class = "separator")
+    div(class = "separator"),
+
+    uiOutput("tileOptions")
   ),
   main = uiOutput("preview")
 )
+
+new_preview_grid <- function(width, height) {
+  new_grid <- vector("list", width)
+
+  for (index in seq_len(width)) {
+    new_grid[[index]] <- vector("list", height)
+  }
+
+  for (column in seq_len(width)) {
+    for (row in seq_len(height)) {
+      new_grid[[column]][[row]] <- 0
+    }
+  }
+
+  new_grid
+}
+
+update_preview_cells <- function(grid_component,
+                                  render_callback,
+                                  container,
+                                  grid_preview,
+                                  session) {
+
+  num_columns <- grid_component$get_width()
+  num_rows <- grid_component$get_height()
+
+  for (row in seq_len(num_rows)) {
+    for (column in seq_len(num_columns)) {
+
+      cell <- grid_component$get_grid()[[column]][[row]]
+
+      hash <- length(cell$get_possible_tiles())
+      if (cell$get_entropy() == 1) {
+        hash <- cell$get_possible_tiles()[[1]]$get_hash()
+      }
+
+      if (grid_preview[[column]][[row]] != hash) {
+        grid_preview[[column]][[row]] <- hash
+
+        session$sendCustomMessage("updateCell", list(
+          container = container,
+          cell = list(
+            row = row,
+            column = column
+          ),
+          content = preview_cell(
+            grid_component$get_grid()[[column]][[row]],
+            render_callback
+          ) |> as.character()
+        ))
+      }
+    }
+  }
+
+  session$sendCustomMessage("triggerAutoStep", "trigger")
+
+  grid_preview
+}
+
 server <- function(input, output, session) {
 
   settings <- reactiveValues(
     tiles = NULL,
     tile_render_callback = NULL,
-    final_grid = NULL
+    final_grid = NULL,
+    grid_preview = NULL,
+    autoStepping = FALSE
   )
 
-  observeEvent(input$tileset, {
-    settings$tiles <- tilesets[[input$tileset]]$tiles
-    settings$tile_render_callback <- tilesets[[input$tileset]]$tile_render_callback
+  grid_height <- debounce(reactive({
+    input$gridHeight
+  }), 200)
+  grid_width <- debounce(reactive({
+    input$gridWidth
+  }), 200)
 
-    settings$final_grid <- wfc_grid(32, 14, settings$tiles)
+
+  restart <- function() {
+    session$sendCustomMessage("toggleAutoTrigger", list(value = FALSE))
+    settings$autoStepping <- FALSE
+
+    width <- input$gridWidth
+    height <- input$gridHeight
+
+    settings$tiles <- tilesets[[input$tileset]]$tiles
+
+    render_callback <- tilesets[[input$tileset]]$tile_render_callback
+    settings$tile_render_callback <- render_callback
+
+    settings$final_grid <- wfc_grid(width, height, settings$tiles)
+
+    settings$grid_preview <- new_preview_grid(width, height)
 
     output$preview <- renderUI({
         preview_grid(settings$final_grid, settings$tile_render_callback)
     })
 
     output$tileList <- renderUI({
-        tile_list(settings$final_grid$get_tiles(), settings$tile_render_callback)
+        tile_list(
+          settings$final_grid$get_tiles(),
+          settings$tile_render_callback
+        )
     })
 
     outputOptions(output, "tileList", suspendWhenHidden = FALSE)
-  })
+  }
 
-
-
-  observeEvent(input$restart, {
-      settings$final_grid$reset()
-
-      output$preview <- renderUI({
-        preview_grid(settings$final_grid, settings$tile_render_callback)
-      })
+  observeEvent(c(input$tileset, input$restart, grid_height(), grid_width()), {
+    restart()
   })
 
   observeEvent(input$step, {
+    session$sendCustomMessage("toggleAutoTrigger", list(value = FALSE))
+
+    if (settings$final_grid$is_finished == TRUE) {
+      return()
+    }
+
     settings$final_grid$step()
 
-    output$preview <- renderUI({
-        preview_grid(settings$final_grid, settings$tile_render_callback)
-    })
+    settings$grid_preview <- update_preview_cells(
+      settings$final_grid,
+      settings$tile_render_callback,
+      "preview",
+      settings$grid_preview,
+      session
+    )
   })
-
-  observeEvent(input$renderFinished, {
-    if (input$autoStep) {
-      settings$final_grid$step()
-
-      output$preview <- renderUI({
-          preview_grid(settings$final_grid, settings$tile_render_callback)
-      })
-    }
-  })
-
-
-  observeEvent(input$back, {
-    settings$final_grid$step_back()
-
-    print(settings$final_grid)
-
-    output$preview <- renderUI({
-      preview_grid(settings$final_grid, settings$tile_render_callback)
-    })
-  })
-
 
   observeEvent(input$solve, {
-    withProgress(settings$final_grid$solve(), message = "Solving Grid...")
+    if (settings$final_grid$is_finished == TRUE) {
+      return()
+    }
 
-    output$preview <- renderUI({
-        preview_grid(settings$final_grid, settings$tile_render_callback)
-    })
+    settings$autoStepping <- TRUE
+
+    if (settings$autoStepping) {
+      session$sendCustomMessage("toggleAutoTrigger", list(value = TRUE))
+      session$sendCustomMessage("triggerAutoStep", "trigger")
+    }
+  })
+  observeEvent(input$autoTrigger, {
+    if (!settings$autoStepping) {
+      return()
+    }
+
+    if (!input$autoTrigger) {
+      return()
+    }
+
+    if (settings$final_grid$is_finished == TRUE) {
+      settings$autoStepping <- FALSE
+      session$sendCustomMessage("toggleAutoTrigger", list(value = FALSE))
+      return()
+    }
+
+    settings$final_grid$step()
+
+    settings$grid_preview <- update_preview_cells(
+      settings$final_grid,
+      settings$tile_render_callback,
+      "preview",
+      settings$grid_preview,
+      session
+    )
   })
 
   output$tileOptions <- renderUI({
