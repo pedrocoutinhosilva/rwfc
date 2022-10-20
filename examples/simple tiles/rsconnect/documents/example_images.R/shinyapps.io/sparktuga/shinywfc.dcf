@@ -5,9 +5,9 @@ account: sparktuga
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 7306776
-bundleId: 6420665
+bundleId: 6424586
 url: https://sparktuga.shinyapps.io/shinywfc/
-when: 1666214158.61371
-lastSyncTime: 1666214158.61371
+when: 1666296447.21305
+lastSyncTime: 1666296447.21305
 asMultiple: FALSE
 asStatic: FALSE
