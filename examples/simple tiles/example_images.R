@@ -208,7 +208,7 @@ ui <- gridPage(
     sliderInput(
       "gridWidth",
       "Grid Width",
-      20,
+      32,
       min = 1,
       max = 50,
       width = "100%"
@@ -216,7 +216,7 @@ ui <- gridPage(
     sliderInput(
       "gridHeight",
       "Grid Height",
-      12,
+      16,
       min = 1,
       max = 50,
       width = "100%"
